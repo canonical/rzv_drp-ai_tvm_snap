@@ -38,8 +38,8 @@ parts:
     override-pull: |
       craftctl default
       # Patch CMakefiles to add the install target to avoid cmake plugin failing
-      git apply -v ${CRAFT_PROJECT_DIR}/cmake.patch
-      git apply -v ${CRAFT_PROJECT_DIR}/ws.patch
+      git apply -v ${CRAFT_PROJECT_DIR}/patches/cmake.patch
+      git apply -v ${CRAFT_PROJECT_DIR}/patches/app.patch
       
       # Follow Renesas Dockerfile setup   
       cp -a $CRAFT_PART_SRC/setup/include/*.h $CRAFT_PART_SRC/tvm/include/tvm/runtime
@@ -58,12 +58,11 @@ parts:
       cp -a $CRAFT_PART_SRC/obj/build_runtime/v2m/lib/* $CRAFT_PRIME/usr/lib/
       
       # Install the model
-      #cp -a $CRAFT_PART_SRC/tutorials/resnet18_onnx $CRAFT_PRIME/usr/bin/
+      cp -a ${CRAFT_PROJECT_DIR}/models/ $CRAFT_PRIME/usr/bin/
       # Install the label lists
-      #cp -a $CRAFT_PART_SRC/apps/exe/synset_words_imagenet.txt $CRAFT_PRIME/usr/bin/
-      #cp -a $CRAFT_PART_SRC/apps/exe/ImageNetLabels.txt $CRAFT_PRIME/usr/bin/
+      cp -a $CRAFT_PART_SRC/apps/exe/synset_words_imagenet.txt $CRAFT_PRIME/usr/bin/
       # Install example bmp
-      #cp -a $CRAFT_PART_SRC/apps/exe/sample.bmp $CRAFT_PRIME/usr/bin/
+      cp -a $CRAFT_PART_SRC/apps/exe/sample.bmp $CRAFT_PRIME/usr/bin/
 
   tutorial-app:
     after: [tvm-runtime]
@@ -97,57 +96,10 @@ parts:
       mkdir -p $CRAFT_PRIME/usr/bin/
       # Install binary
       cp -a $CRAFT_PART_BUILD/tutorial_app_v2ml $CRAFT_PRIME/usr/bin/
-
-  sample_app_drpai_tvm_usbcam_http:
-    after: [tvm-runtime]
-    plugin: cmake
-    source: ${CRAFT_PROJECT_DIR}/../parts/tvm-runtime/src/how-to/sample_app/src
-    source-type: local
-    cmake-parameters:
-      - -DCMAKE_INSTALL_PREFIX=/usr/
-      - -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc
-      - -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
-    build-environment:
-      - PRODUCT: V2L
-      - TVM_ROOT: ${CRAFT_PROJECT_DIR}/../parts/tvm-runtime/src
-    build-packages:
-      - cmake
-      - ninja-build
-      - pkg-config
-      - gcc-aarch64-linux-gnu
-      - g++-aarch64-linux-gnu
-      - libturbojpeg0-dev:$CRAFT_ARCH_BUILD_FOR
-      - libboost1.83-dev:$CRAFT_ARCH_BUILD_FOR 
-      - libopencv-dev:$CRAFT_ARCH_BUILD_FOR
-      - libwayland-dev:$CRAFT_ARCH_BUILD_FOR
-      - libegl-dev:$CRAFT_ARCH_BUILD_FOR
-      - libgles-dev:$CRAFT_ARCH_BUILD_FOR
-      - libmmngr-dev:$CRAFT_ARCH_BUILD_FOR
-      - libmmngrbuf-dev:$CRAFT_ARCH_BUILD_FOR
-    stage-packages:
-      - libturbojpeg:$CRAFT_ARCH_BUILD_FOR
-      - libmmngr1:$CRAFT_ARCH_BUILD_FOR
-      - libmmngrbuf1:$CRAFT_ARCH_BUILD_FOR
-      - libopencv-video406t64:$CRAFT_ARCH_BUILD_FOR 
-      - libopencv-highgui406t64:$CRAFT_ARCH_BUILD_FOR 
-      - libopencv-imgproc406t64:$CRAFT_ARCH_BUILD_FOR 
-      - libopencv-imgcodecs406t64:$CRAFT_ARCH_BUILD_FOR
-      - libopencv-videoio406t64:$CRAFT_ARCH_BUILD_FOR
-    override-prime: |
-      craftctl default
-      mkdir -p $CRAFT_PRIME/usr/bin/
-      # Install binary
-      cp -a $CRAFT_PART_BUILD/sample_app_drpai_tvm_usbcam_http $CRAFT_PRIME/usr/bin/
+      cp -a ${CRAFT_PROJECT_DIR}/launch-tutorial.sh $CRAFT_PRIME/usr/bin/
 
 apps:
   tutorial-app:
-    command: usr/bin/tutorial_app_v2ml
+    command: usr/bin/launch-tutorial.sh
     environment:
       LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas
-    plugs: [camera, opengl, wayland]
-
-  sample-app-drpai-tvm-usbcam-http:
-    command: usr/bin/sample_app_drpai_tvm_usbcam_http
-    environment:
-      LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas
-    plugs: [camera, opengl, wayland, network, network-bind ]
