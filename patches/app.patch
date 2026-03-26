@@ -2,9 +2,26 @@ diff --git a/apps/tutorial_app_v2ml.cpp b/apps/tutorial_app_v2ml.cpp
 index 08c0b84..7e754a3 100644
 --- a/apps/tutorial_app_v2ml.cpp
 +++ b/apps/tutorial_app_v2ml.cpp
+@@ -314,14 +314,14 @@
+     if (0 > fd)
+     {
+         std::cerr << "[ERROR] Failed to open udmabuf phys_addr " << std::endl;
+-        return 0;
++        return -1;
+     }
+     read_ret = read(fd, addr, 1024);
+     if (0 > read_ret)
+     {
+         std::cerr << "[ERROR] Failed to read udmabuf phys_addr " << std::endl;
+         close(fd);
+-        return 0;
++        return -1;
+     }
+     sscanf(addr, "%lx", &udmabuf_addr_start);
+     close(fd);
 @@ -366,7 +366,21 @@ int main(int argc, char** argv)
      std::string pre_dir = model_dir + "/preprocess";
- 
+
      /* Input image file */
 -    std::string filename = "sample.bmp";
 +    std::string filename;
@@ -22,6 +39,115 @@ index 08c0b84..7e754a3 100644
 +        return -1;
 +    }
 +    std::cout << "Processing: " << filename << std::endl;
- 
+
      /* About u-dma-buf
          Pre-processing Runtime requires the input buffer to be allocated in continuous memory area.
+@@ -383,12 +397,12 @@
+     if (label_file_map.empty())
+     {
+         std::cerr << "[ERROR] Label file : failed to load "<< labels << std::endl;
+-        return 0;
++        return -1;
+     }
+
+     /* Get DRP-AI memory start address */
+     drpaimem_addr_start = get_drpai_start_addr();
+-    if (drpaimem_addr_start == (uint32_t)NULL) return 0;
++    if (drpaimem_addr_start == (uint32_t)NULL) return -1;
+
+     /* Define memory allocation constants */
+     const uint32_t MEMORY_ALIGNMENT = 0x1000000; // 16MB alignment
+@@ -424,7 +438,7 @@
+     if (0 < ret)
+     {
+         std::cerr << "[ERROR] Failed to run Pre-processing Runtime Load()." << std::endl;
+-        return 0;
++        return -1;
+     }
+
+     /*Get input data */
+@@ -435,21 +449,21 @@
+     if (0 == udmabuf_addr_start)
+     {
+         std::cerr << "[ERROR] Failed to get u-dma-buf." << std::endl;
+-        return 0;
++        return -1;
+     }
+     /* Allocate image buffer in u-dma-buf memory area */
+     udmabuf_fd = open("/dev/udmabuf0", O_RDWR );
+     if (0 > udmabuf_fd)
+     {
+         std::cerr << "[ERROR] Failed to open udmabuf " << std::endl;
+-        return 0;
++        return -1;
+     }
+     img_buffer =(unsigned char*) mmap(NULL, udmabuf_size ,PROT_READ|PROT_WRITE, MAP_SHARED,  udmabuf_fd, 0);
+     if (MAP_FAILED == img_buffer)
+     {
+         std::cerr << "[ERROR] Failed to run mmap: udmabuf " << std::endl;
+         close(udmabuf_fd);
+-        return 0;
++        return -1;
+     }
+
+     /* Write once to allocate physical memory to u-dma-buf virtual space.
+@@ -474,7 +488,7 @@
+             std::cerr << "[ERROR] Failed to read image :"<<filename << std::endl;
+             munmap(img_buffer, udmabuf_size);
+             close(udmabuf_fd);
+-            return 0;
++            return -1;
+         }
+         /*Define parameter to be changed in Pre-processing Runtime*/
+         s_preproc_param_t in_param;
+@@ -522,7 +536,7 @@
+             std::cerr << "[ERROR] Failed to run Pre-processing Runtime Pre()." << std::endl;
+             munmap(img_buffer, udmabuf_size);
+             close(udmabuf_fd);
+-            return 0;
++            return -1;
+         }
+         timespec_get(&end_time, TIME_UTC);
+         /* Print Inference processing time */
+@@ -538,14 +552,14 @@
+         /*If your model input data type is FP16, use std::vector<uint16_t> for reading input data. */
+         munmap(img_buffer, udmabuf_size);
+         close(udmabuf_fd);
+-        return 0;
++        return -1;
+     }
+     else
+     {
+         std::cerr << "[ERROR] Input data type : neither FP32 nor FP16." << std::endl;
+         munmap(img_buffer, udmabuf_size);
+         close(udmabuf_fd);
+-        return 0;
++        return -1;
+     }
+
+     timespec_get(&start_time, TIME_UTC);
+@@ -564,7 +578,7 @@
+         std::cerr << "[ERROR] Output size : not 1." << std::endl;
+         munmap(img_buffer, udmabuf_size);
+         close(udmabuf_fd);
+-        return 0;
++        return -1;
+     }
+
+     /* Comparing output with reference.*/
+@@ -607,7 +621,7 @@
+         /*End application*/
+         munmap(img_buffer, udmabuf_size);
+         close(udmabuf_fd);
+-        return 0;
++        return -1;
+     }
+
+     /*Post-processing: common for FP16/FP32*/
+@@ -633,5 +647,5 @@
+
+     munmap(img_buffer, udmabuf_size);
+     close(udmabuf_fd);
+-    return 0;
++    return (runtime_last_addr == 0) ? -1 : 0;
+ }
